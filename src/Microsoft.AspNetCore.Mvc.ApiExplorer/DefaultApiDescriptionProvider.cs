@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Abstractions;
@@ -162,7 +163,20 @@ namespace Microsoft.AspNetCore.Mvc.ApiExplorer
                 foreach (var actionParameter in context.ActionDescriptor.Parameters)
                 {
                     var visitor = new PseudoModelBindingVisitor(context, actionParameter);
-                    var metadata = _modelMetadataProvider.GetMetadataForType(actionParameter.ParameterType);
+
+                    ModelMetadata metadata;
+                    if (_modelMetadataProvider is ModelMetadataProvider defaultMetadataProvider)
+                    {
+                        var parameterInfo = context.ActionDescriptor.MethodInfo.GetParameters()
+                            .Where(pi => string.Equals(actionParameter.Name, pi.Name)
+                            && actionParameter.ParameterType.Equals(pi.ParameterType))
+                            .Single();
+                        metadata = defaultMetadataProvider.GetMetadataForParameter(parameterInfo);
+                    }
+                    else
+                    {
+                        metadata = _modelMetadataProvider.GetMetadataForType(actionParameter.ParameterType);
+                    }
 
                     var bindingContext = ApiParameterDescriptionContext.GetContext(
                         metadata,
